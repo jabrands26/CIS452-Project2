@@ -1,3 +1,14 @@
+// TODO:
+// Add ramsied
+// add color
+// add outputs
+// ingredient acquisition (fridge and pantry)
+// ramsy event
+// recipe execution (with time) this includes functions listed above
+// then a baker thread 
+// main fucntion that runs our code, initilization for semaphores and ramsy selection then runs and cleans up
+
+
 // Copied from Project 1
 #include <stdio.h>
 #include <stdlib.h>
