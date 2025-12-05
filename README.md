@@ -22,15 +22,15 @@ This project simulates a shared kitchen space, where multiple bakers operate at 
 
 # Images of Running Code
 <img width="619" height="718" alt="outputPart1" src="https://github.com/user-attachments/assets/e0a55bd0-45ae-4d60-9ea3-637673c61740" />
-
+<br><br>
 <img width="466" height="790" alt="outputPart2" src="https://github.com/user-attachments/assets/ffac8bfe-2a8b-42c1-95f1-d447776e940e" />
-
+<br><br>
 <img width="479" height="802" alt="outputPart3" src="https://github.com/user-attachments/assets/28d3a9b6-035f-4aef-b139-eda7dcfe913c" />
-
+<br><br>
 <img width="423" height="796" alt="outputPart4" src="https://github.com/user-attachments/assets/9211c072-90ad-4a7c-9062-d4345514abe4" />
-
+<br><br>
 <img width="332" height="245" alt="outputPart5" src="https://github.com/user-attachments/assets/461e78fd-d460-405b-8a49-d575ba3f698d" />
-
+<br><br>
 
 
 # How to Run
