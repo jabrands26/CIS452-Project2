@@ -5,6 +5,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <time.h>
+#include <stdarg.h>
+#include <stdbool.h>
 
 // kitchen semaphores
 typedef struct {
@@ -35,9 +37,6 @@ typedef enum {
     ING_COUNT  // total number of ingredients
 } Ingredient;
 
-// Track which ingredients the player has
-bool hasIngredient[ING_COUNT] = { false };
-
 // ingredient name lookup table
 const char* ingredientNames[] = {
     "Flour",
@@ -51,6 +50,9 @@ const char* ingredientNames[] = {
     "Egg"
 };
 
+bool isPantry(Ingredient i) { return i <= ING_CINNAMON; }
+bool isFridge(Ingredient i) { return i >= ING_MILK; }
+
 // Recipes
 typedef struct {
     const char *name;
@@ -58,55 +60,32 @@ typedef struct {
     int count;
 } Recipe;
 
-Ingredient cookies[] = {
-    ING_FLOUR, ING_SUGAR, ING_MILK, ING_BUTTER
-};
-int cookiesCount = 4;
+Ingredient cookies[] = {ING_FLOUR, ING_SUGAR, ING_MILK, ING_BUTTER};
 
-Ingredient pancakes[] = {
-    ING_FLOUR, ING_SUGAR, ING_BAKING_SODA, ING_SALT,
-    ING_EGG, ING_MILK, ING_BUTTER
-};
-int pancakesCount = 7;
+Ingredient pancakes[] = {ING_FLOUR, ING_SUGAR, ING_BAKING_SODA, ING_SALT, ING_EGG, ING_MILK, ING_BUTTER};
 
-Ingredient pizzaDough[] = {
-    ING_YEAST, ING_SUGAR, ING_SALT
-};
-int pizzaDoughCount = 3;
+Ingredient pizzaDough[] = {ING_YEAST, ING_SUGAR, ING_SALT};
 
-Ingredient softPretzels[] = {
-    ING_FLOUR, ING_SUGAR, ING_SALT,
-    ING_YEAST, ING_BAKING_SODA, ING_EGG
-};
-int softPretzelsCount = 6;
+Ingredient softPretzels[] = {ING_FLOUR, ING_SUGAR, ING_SALT, ING_YEAST, ING_BAKING_SODA, ING_EGG};
 
-Ingredient cinnamonRolls[] = {
-    ING_FLOUR, ING_SUGAR, ING_SALT,
-    ING_BUTTER, ING_EGG, ING_CINNAMON
-};
-int cinnamonRollsCount = 6;
+Ingredient cinnamonRolls[] = {ING_FLOUR, ING_SUGAR, ING_SALT, ING_BUTTER, ING_EGG, ING_CINNAMON};
 
 Recipe recipes[] = {
     {"Cookies", cookies, sizeof(cookies)/sizeof(*cookies)},
     {"Pancakes", pancakes, sizeof(pancakes)/sizeof(*pancakes)},
-    {"Pizza Dough", pizza, sizeof(pizza)/sizeof(*pizza)},
-    {"Soft Pretzels", pretzels, sizeof(pretzels)/sizeof(*pretzels)},
-    {"Cinnamon Rolls", cinnamon_rolls, sizeof(cinnamon_rolls)/sizeof(*cinnamon_rolls)}
+    {"Pizza Dough", pizzaDough, sizeof(pizzaDough)/sizeof(*pizzaDough)},
+    {"Soft Pretzels", softPretzels, sizeof(softPretzels)/sizeof(*softPretzels)},
+    {"Cinnamon Rolls", cinnamonRolls, sizeof(cinnamonRolls)/sizeof(*cinnamonRolls)}
 };
 
-const int RECIPE_COUNT = sizeof(recipes)/sizeof(recipes[0]);
+#define RECIPE_COUNT 5
 
 // colored output
 const char *colors[] = {
     "\033[31m","\033[32m","\033[33m","\033[34m","\033[35m","\033[36m","\033[37m"
 };
 const int COLOR_COUNT = sizeof(colors)/sizeof(colors[0]);
-
 pthread_mutex_t print_lock = PTHREAD_MUTEX_INITIALIZER;
-
-// ramsied logic
-int ramsied_baker = -1;
-int ramsied_done = 0;
 
 void colored_printf(const char *color, const char *fmt, ...) {
     va_list ap;
@@ -123,10 +102,22 @@ void colored_printf(const char *color, const char *fmt, ...) {
 typedef struct {
     int id;
     const char *color;
+    int order[RECIPE_COUNT];  // shuffled recipe order
 } Baker;
 
-bool isPantry(Ingredient i) { return i <= ING_CINNAMON; }
-bool isFridge(Ingredient i) { return i >= ING_MILK; }
+// randomize recipe order
+void shuffle(int *array, int size) {
+    for (int i = size - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
+
+// ramsied logic
+int ramsied_baker = -1;
+int ramsied_done = 0;
 
 void releaseTools(int pantry, int fridge, int bowl, int spoon, int mixer, int oven) {
     if (mixer) sem_post(&kitchen.mixer_sem);
@@ -141,7 +132,7 @@ void *baker_thread(void *arg) {
     Baker *b = (Baker*)arg;
 
     for (int r = 0; r < RECIPE_COUNT; r++) {
-        Recipe *rec = &recipes[r];
+        Recipe *rec = &recipes[b->order[r]];
         int completed = 0, attempt = 0;
 
         while (!completed) {
@@ -162,12 +153,23 @@ void *baker_thread(void *arg) {
                 if (isFridge(ing)) { sem_post(&kitchen.fridge_sem); held_fridge=0; }
             }
 
-            // Acquire mixing tools
-            sem_wait(&kitchen.bowl_sem); held_bowl=1;
-            sem_wait(&kitchen.spoon_sem); held_spoon=1;
-            sem_wait(&kitchen.mixer_sem); held_mixer=1;
+            // Acquire bowl
+            sem_wait(&kitchen.bowl_sem);
+            colored_printf(b->color,"Baker %d: Using bowl\n",b->id);
+            sem_post(&kitchen.bowl_sem);
 
-            colored_printf(b->color,"Baker %d: Mixing '%s'\n",b->id,rec->name);
+            // Acquire spoon
+            sem_wait(&kitchen.spoon_sem);
+            colored_printf(b->color,"Baker %d: Using spoon\n",b->id);
+            sem_post(&kitchen.spoon_sem);
+
+            // Acquire mixer
+            sem_wait(&kitchen.mixer_sem);
+            colored_printf(b->color,"Baker %d: Using mixer\n",b->id);
+            sem_post(&kitchen.mixer_sem);
+
+            // Mixing
+            colored_printf(b->color,"Baker %d: Mixing '%s'\n", b->id, rec->name);
 
             // Ramsied logic
             if (b->id == ramsied_baker && !ramsied_done) {
@@ -177,10 +179,6 @@ void *baker_thread(void *arg) {
                 ramsied_done=1;
                 continue;
             }
-
-            sem_post(&kitchen.mixer_sem); held_mixer=0;
-            sem_post(&kitchen.spoon_sem); held_spoon=0;
-            sem_post(&kitchen.bowl_sem); held_bowl=0;
 
             // Bake
             sem_wait(&kitchen.oven_sem); held_oven=1;
@@ -209,21 +207,30 @@ int main() {
 
     int baker_count;
     printf("Enter number of bakers: ");
-    if (scanf("%d",&baker_count)!=1 || baker_count<=0) return 1;
+    scanf("%d", &baker_count);
 
-    ramsied_baker = rand()%baker_count;
+    ramsied_baker = rand() % baker_count;
     printf("Baker %d will be Ramsied once.\n",ramsied_baker);
 
     pthread_t threads[baker_count];
     Baker bakers[baker_count];
 
-    for(int i=0;i<baker_count;i++){
-        bakers[i].id=i;
-        bakers[i].color=colors[i%COLOR_COUNT];
-        pthread_create(&threads[i],NULL,baker_thread,&bakers[i]);
-    }
+    for(int i = 0; i < baker_count; i++){
+    bakers[i].id = i;
+    bakers[i].color = colors[i % COLOR_COUNT];
 
-    for(int i=0;i<baker_count;i++) pthread_join(threads[i],NULL);
+    // Assign recipe order in natural order first
+    for(int r = 0; r < RECIPE_COUNT; r++)
+        bakers[i].order[r] = r;
+
+    // Randomize the order
+    shuffle(bakers[i].order, RECIPE_COUNT);
+
+    pthread_create(&threads[i], NULL, baker_thread, &bakers[i]);
+}
+
+    for(int i = 0; i < baker_count; i++)
+        pthread_join(threads[i], NULL);
 
     sem_destroy(&kitchen.pantry_sem);
     sem_destroy(&kitchen.fridge_sem);
@@ -236,97 +243,3 @@ int main() {
     
     return 0;
 }
-=======
-#include <signal.h>
-#include <sys/wait.h>
-#include <time.h>
-
-#define MAX_BAKERS 20
-
-//Kitchen Recources
-sem_t sem_pantry; // Only 1 baker in pantry at a time
-sem_t sem_fridge_slots; // 2 fridges -> 2 bakers at once
-sem_t sem_mixer; // 2 mixers
-sem_t sem_bowl;// 3 bowls
-sem_t sem_spoon;// 5 spoons
-sem_t sem_oven;// 1 oven
-
-const char *pantry_items[] = {
-    "Flour", //0
-    "Sugar", //1
-    "Yeast", //2
-    "Baking Soda", //3
-    "Salt", //4
-    "Cinnamon" //5
-};
-const int PANTRY_COUNT = 6;
-
-
-
-const char *fridge_items[] = {
-    "Egg", //0
-    "Milk", //1
-    "Butter" //2
-};
-const int FRIDGE_COUNT = 3;
-
-//enum-like indeces
-enum PantryIndex {
-    P_FLOUR = 0,
-    P_SUGAR = 1,
-    P_YEAST = 2,
-    P_BAKING_SODA = 3,
-    P_SALT = 4,
-    P_CINNAMON = 5
-};
-
-enum FridgeIndex {
-    F_EGG = 0,
-    F_MILK = 1,
-    F_BUTTER = 2
-};
-
-// All recipes
-Recipe recipes[] = {
-    // Cookies: Flour, Sugar, Milk, Butter
-    {
-        .name = "Cookies",
-        .pantry_need = { P_FLOUR, P_SUGAR },
-        .pantry_count = 2,
-        .fridge_need = { F_MILK, F_BUTTER },
-        .fridge_count = 2
-    },
-    // Pancakes: Flour, Sugar, Baking soda, Salt, Egg, Milk, Butter
-    {
-        .name = "Pancakes",
-        .pantry_need = { P_FLOUR, P_SUGAR, P_BAKING_SODA, P_SALT },
-        .pantry_count = 4,
-        .fridge_need = { F_EGG, F_MILK, F_BUTTER },
-        .fridge_count = 3
-    },
-    // Homemade pizza dough: Yeast, Sugar, Salt
-    {
-        .name = "Pizza Dough",
-        .pantry_need = { P_YEAST, P_SUGAR, P_SALT },
-        .pantry_count = 3,
-        .fridge_need = { },
-        .fridge_count = 0
-    },
-    // Soft Pretzels: Flour, Sugar, Salt, Yeast, Baking Soda, Egg
-    {
-        .name = "Soft Pretzels",
-        .pantry_need = { P_FLOUR, P_SUGAR, P_SALT, P_YEAST, P_BAKING_SODA },
-        .pantry_count = 5,
-        .fridge_need = { F_EGG },
-        .fridge_count = 1
-    },
-    // Cinnamon rolls: Flour, Sugar, Salt, Butter, Eggs, Cinnamon
-    {
-        .name = "Cinnamon Rolls",
-        .pantry_need = { P_FLOUR, P_SUGAR, P_SALT, P_CINNAMON },
-        .pantry_count = 4,
-        .fridge_need = { F_BUTTER, F_EGG },
-        .fridge_count = 2
-    }
-};
-const int RECIPE_COUNT = 5;
