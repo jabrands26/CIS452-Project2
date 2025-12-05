@@ -20,6 +20,14 @@ This project simulates a shared kitchen space, where multiple bakers operate at 
  - A single baker is chosen to be ramsied, causing them to release all semaphores and restart their current recipe.
  - Threads run continuously until all recipes are completed
 
+# Images of Running Code
+<img width="332" height="245" alt="outputPart5" src="https://github.com/user-attachments/assets/461e78fd-d460-405b-8a49-d575ba3f698d" />
+<img width="423" height="796" alt="outputPart4" src="https://github.com/user-attachments/assets/9211c072-90ad-4a7c-9062-d4345514abe4" />
+<img width="479" height="802" alt="outputPart3" src="https://github.com/user-attachments/assets/28d3a9b6-035f-4aef-b139-eda7dcfe913c" />
+<img width="466" height="790" alt="outputPart2" src="https://github.com/user-attachments/assets/ffac8bfe-2a8b-42c1-95f1-d447776e940e" />
+<img width="619" height="718" alt="outputPart1" src="https://github.com/user-attachments/assets/e0a55bd0-45ae-4d60-9ea3-637673c61740" />
+
+
 # How to Run
 1. Compile: gcc -o getting-ramsied getting-ramsied.c
 2. Run: ./getting-ramsied
