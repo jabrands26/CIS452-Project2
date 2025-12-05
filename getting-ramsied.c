@@ -8,7 +8,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-// kitchen semaphores
+//kitchen semaphores
 typedef struct {
     sem_t pantry_sem;
     sem_t fridge_sem;
@@ -21,7 +21,7 @@ typedef struct {
 Kitchen kitchen;
 
 typedef enum {
-    // Pantry
+    //Pantry
     ING_FLOUR,
     ING_SUGAR,
     ING_YEAST,
@@ -29,15 +29,15 @@ typedef enum {
     ING_SALT,
     ING_CINNAMON,
 
-    // Fridge
+    //Fridge
     ING_MILK,
     ING_BUTTER,
     ING_EGG,
 
-    ING_COUNT  // total number of ingredients
+    ING_COUNT
 } Ingredient;
 
-// ingredient name lookup table
+//ingredient name lookup table
 const char* ingredientNames[] = {
     "Flour",
     "Sugar",
@@ -53,7 +53,7 @@ const char* ingredientNames[] = {
 bool isPantry(Ingredient i) { return i <= ING_CINNAMON; }
 bool isFridge(Ingredient i) { return i >= ING_MILK; }
 
-// Recipes
+//Recipes
 typedef struct {
     const char *name;
     Ingredient *list;
@@ -80,7 +80,7 @@ Recipe recipes[] = {
 
 #define RECIPE_COUNT 5
 
-// colored output
+//color
 const char *colors[] = {
     "\033[31m","\033[32m","\033[33m","\033[34m","\033[35m","\033[36m","\033[37m"
 };
@@ -98,14 +98,13 @@ void colored_printf(const char *color, const char *fmt, ...) {
     pthread_mutex_unlock(&print_lock);
 }
 
-// code for bakers
 typedef struct {
     int id;
     const char *color;
     int order[RECIPE_COUNT];  // shuffled recipe order
 } Baker;
 
-// randomize recipe order
+//randomize recipe order
 void shuffle(int *array, int size) {
     for (int i = size - 1; i > 0; i--) {
         int j = rand() % (i + 1);
@@ -115,7 +114,6 @@ void shuffle(int *array, int size) {
     }
 }
 
-// ramsied logic
 int ramsied_baker = -1;
 int ramsied_done = 0;
 
@@ -141,38 +139,32 @@ void *baker_thread(void *arg) {
 
             colored_printf(b->color, "Baker %d: Starting attempt %d for '%s'\n", b->id, attempt, rec->name);
 
-            // Acquire pantry/fridge as needed
             for (int i = 0; i < rec->count; i++) {
                 Ingredient ing = rec->list[i];
                 if (isPantry(ing)) { sem_wait(&kitchen.pantry_sem); held_pantry=1; }
                 if (isFridge(ing)) { sem_wait(&kitchen.fridge_sem); held_fridge=1; }
 
                 colored_printf(b->color, "Baker %d: Taking ingredient '%s'\n", b->id, ingredientNames[ing]);
-                usleep(1000); // simulate doing the action
+                usleep(1000);
 
                 if (isPantry(ing)) { sem_post(&kitchen.pantry_sem); held_pantry=0; }
                 if (isFridge(ing)) { sem_post(&kitchen.fridge_sem); held_fridge=0; }           
             }
 
-            // Acquire bowl
             sem_wait(&kitchen.bowl_sem);
             colored_printf(b->color,"Baker %d: Using bowl\n",b->id);
-            usleep(1000); // simulate doing the action
+            usleep(1000);
             sem_post(&kitchen.bowl_sem);
-            // Acquire spoon
             sem_wait(&kitchen.spoon_sem);
             colored_printf(b->color,"Baker %d: Using spoon\n",b->id);
-            usleep(1000); // simulate doing the action
+            usleep(1000);
             sem_post(&kitchen.spoon_sem);
-            // Acquire mixer
             sem_wait(&kitchen.mixer_sem);
             colored_printf(b->color,"Baker %d: Using mixer\n",b->id);
-            usleep(1000); // simulate doing the action
+            usleep(1000);
             sem_post(&kitchen.mixer_sem);
-            // Mixing
             colored_printf(b->color,"Baker %d: Mixing '%s'\n", b->id, rec->name);
 
-            // Ramsied logic
             if (b->id == ramsied_baker && !ramsied_done) {
                 colored_printf(b->color,"Baker %d: ***RAMSIED*** Restarting '%s'\n",b->id,rec->name);
                 releaseTools(held_pantry,held_fridge,held_bowl,held_spoon,held_mixer,held_oven);
@@ -181,7 +173,6 @@ void *baker_thread(void *arg) {
                 continue;
             }
 
-            // Bake
             sem_wait(&kitchen.oven_sem); held_oven=1;
             colored_printf(b->color,"Baker %d: Baking '%s'\n",b->id,rec->name);
             sem_post(&kitchen.oven_sem); held_oven=0;
@@ -198,7 +189,6 @@ void *baker_thread(void *arg) {
 int main() {
     srand(time(NULL));
 
-    // initialize semaphores with number of available for each
     sem_init(&kitchen.pantry_sem, 0, 1);
     sem_init(&kitchen.fridge_sem, 0, 2);
     sem_init(&kitchen.mixer_sem, 0, 2);
@@ -220,11 +210,9 @@ int main() {
     bakers[i].id = i;
     bakers[i].color = colors[i % COLOR_COUNT];
 
-    // Assign recipe order in natural order first
     for(int r = 0; r < RECIPE_COUNT; r++)
         bakers[i].order[r] = r;
 
-    // Randomize the order
     shuffle(bakers[i].order, RECIPE_COUNT);
 
     pthread_create(&threads[i], NULL, baker_thread, &bakers[i]);
