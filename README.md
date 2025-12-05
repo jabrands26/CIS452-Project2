@@ -21,8 +21,8 @@ This project simulates a shared kitchen space, where multiple bakers operate at 
  - Threads run continuously until all recipes are completed
 
 # How to Run
-1. Compile: gcc -o gettingRamsied gettingRamsied.c
-2. Run: ./gettingRamsied
+1. Compile: gcc -o getting-ramsied getting-ramsied.c
+2. Run: ./getting-ramsied
 3. Enter the number of bakers
 4. Watch the bakers create their recipes
 5. Program ends once all bakers have completed their recipes.
