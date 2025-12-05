@@ -148,26 +148,27 @@ void *baker_thread(void *arg) {
                 if (isFridge(ing)) { sem_wait(&kitchen.fridge_sem); held_fridge=1; }
 
                 colored_printf(b->color, "Baker %d: Taking ingredient '%s'\n", b->id, ingredientNames[ing]);
+                usleep(1000); // simulate doing the action
 
                 if (isPantry(ing)) { sem_post(&kitchen.pantry_sem); held_pantry=0; }
-                if (isFridge(ing)) { sem_post(&kitchen.fridge_sem); held_fridge=0; }
+                if (isFridge(ing)) { sem_post(&kitchen.fridge_sem); held_fridge=0; }           
             }
 
             // Acquire bowl
             sem_wait(&kitchen.bowl_sem);
             colored_printf(b->color,"Baker %d: Using bowl\n",b->id);
+            usleep(1000); // simulate doing the action
             sem_post(&kitchen.bowl_sem);
-
             // Acquire spoon
             sem_wait(&kitchen.spoon_sem);
             colored_printf(b->color,"Baker %d: Using spoon\n",b->id);
+            usleep(1000); // simulate doing the action
             sem_post(&kitchen.spoon_sem);
-
             // Acquire mixer
             sem_wait(&kitchen.mixer_sem);
             colored_printf(b->color,"Baker %d: Using mixer\n",b->id);
+            usleep(1000); // simulate doing the action
             sem_post(&kitchen.mixer_sem);
-
             // Mixing
             colored_printf(b->color,"Baker %d: Mixing '%s'\n", b->id, rec->name);
 
